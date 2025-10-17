@@ -92,10 +92,25 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // ========================================
-// HEALTH CHECK ENDPOINT
+// ROOT & INFO ENDPOINTS
 // ========================================
 
 /**
+ * ROOT ENDPOINT
+ * LEARNING: Friendly message for root URL
+ */
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: '🚀 HoloDesk API is live!',
+    version: '1.0.0',
+    docs: 'Visit /api for available endpoints',
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * HEALTH CHECK ENDPOINT
  * WHAT THIS DOES: Simple endpoint to check if server is running
  * USED BY: Render health checks, monitoring tools
  * WHY: Render automatically pings this to verify deployment
@@ -107,6 +122,7 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     database: 'Connected',
+    uptime: process.uptime()
   });
 });
 
@@ -120,46 +136,84 @@ app.get('/api', (req, res) => {
     message: 'Welcome to HoloDesk API',
     version: '1.0.0',
     endpoints: {
-      health: '/health',
-      auth: '/api/auth (coming soon)',
-      users: '/api/users (coming soon)',
-      workspaces: '/api/workspaces (coming soon)',
-      widgets: '/api/widgets (coming soon)',
+      root: {
+        path: '/',
+        method: 'GET',
+        description: 'API welcome message'
+      },
+      health: {
+        path: '/health',
+        method: 'GET',
+        description: 'Health check endpoint'
+      },
+      auth: {
+        base: '/api/auth',
+        routes: {
+          register: 'POST /api/auth/register',
+          login: 'POST /api/auth/login',
+          refresh: 'POST /api/auth/refresh',
+          me: 'GET /api/auth/me (protected)',
+          logout: 'POST /api/auth/logout (protected)',
+          updatePassword: 'PUT /api/auth/password (protected)',
+          test: 'GET /api/auth/test'
+        }
+      },
+      workspaces: {
+        base: '/api/workspaces',
+        status: 'Coming soon'
+      },
+      widgets: {
+        base: '/api/widgets',
+        status: 'Coming soon'
+      }
     },
-    documentation: 'https://github.com/skillmates07-stack/holodesk-backend',
-  });
-});
-
-/**
- * ROOT ENDPOINT
- * LEARNING: Friendly message for root URL
- */
-app.get('/', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: '🚀 HoloDesk API is live!',
-    version: '1.0.0',
-    docs: 'Visit /api for available endpoints',
+    documentation: 'https://github.com/skillmates07-stack/holodesk-backend'
   });
 });
 
 // ========================================
-// API ROUTES (Will add in next phase)
+// API ROUTES
 // ========================================
 
 /**
- * LEARNING: Mount route handlers
- * Pattern: app.use(path, handler)
- * WHY: Keeps routes organized by feature
+ * LEARNING: Mounting routes
+ * app.use(path, router) = All routes in router are prefixed with path
+ * 
+ * Example:
+ * authRoutes has: router.post('/login', ...)
+ * Mounted at: app.use('/api/auth', authRoutes)
+ * Final URL: POST /api/auth/login
  */
 
-// Placeholder - we'll add these files next
-// const authRoutes = require('./routes/authRoutes');
+try {
+  // Import auth routes
+  const authRoutes = require('./routes/authRoutes');
+  
+  // Mount auth routes at /api/auth
+  app.use('/api/auth', authRoutes);
+  
+  console.log('✅ Auth routes mounted at /api/auth');
+} catch (error) {
+  console.error('❌ Failed to load auth routes:', error.message);
+  console.error('🔍 Make sure src/routes/authRoutes.js exists');
+}
+
+// ========================================
+// FUTURE ROUTES (Placeholders)
+// ========================================
+
+/**
+ * LEARNING: We'll add these routes in next phases
+ * - User routes: Profile management, settings
+ * - Workspace routes: CRUD operations
+ * - Widget routes: Add, update, delete widgets
+ */
+
+// TODO: Add these in future updates
 // const userRoutes = require('./routes/userRoutes');
 // const workspaceRoutes = require('./routes/workspaceRoutes');
 // const widgetRoutes = require('./routes/widgetRoutes');
 
-// app.use('/api/auth', authRoutes);
 // app.use('/api/users', userRoutes);
 // app.use('/api/workspaces', workspaceRoutes);
 // app.use('/api/widgets', widgetRoutes);
@@ -177,11 +231,14 @@ app.use((req, res, next) => {
   res.status(404).json({
     status: 'error',
     message: `Route ${req.method} ${req.originalUrl} not found`,
+    code: 'ROUTE_NOT_FOUND',
     availableEndpoints: {
       root: '/',
       health: '/health',
       api: '/api',
+      auth: '/api/auth/*'
     },
+    hint: 'Visit /api for list of all available endpoints'
   });
 });
 
@@ -195,7 +252,13 @@ app.use((req, res, next) => {
  * LEARNING: Express detects error handlers by 4 parameters (err, req, res, next)
  */
 app.use((err, req, res, next) => {
-  console.error('❌ Error occurred:', err);
+  console.error('═══════════════════════════════════════════');
+  console.error('❌ Global Error Handler Caught:');
+  console.error('═══════════════════════════════════════════');
+  console.error('Error Name:', err.name);
+  console.error('Error Message:', err.message);
+  console.error('Stack Trace:', err.stack);
+  console.error('═══════════════════════════════════════════');
 
   // Default to 500 server error
   const statusCode = err.statusCode || 500;
@@ -205,10 +268,12 @@ app.use((err, req, res, next) => {
     status: 'error',
     statusCode,
     message,
+    code: err.code || 'SERVER_ERROR',
+    // Only show stack trace in development
     ...(process.env.NODE_ENV !== 'production' && {
       stack: err.stack,
-      error: err,
-    }),
+      error: err
+    })
   });
 });
 
