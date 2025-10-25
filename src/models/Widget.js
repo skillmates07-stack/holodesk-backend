@@ -54,7 +54,6 @@ const widgetSchema = new mongoose.Schema(
   }
 );
 
-// Compound index for efficient queries
 widgetSchema.index({ userId: 1, workspaceId: 1 });
 widgetSchema.index({ userId: 1, workspaceId: 1, id: 1 }, { unique: true });
 
