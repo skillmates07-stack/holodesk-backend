@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/authMiddleware');
+const { authMiddleware } = require('../middleware/authMiddleware');
 const Widget = require('../models/Widget');
 
 /**
  * GET /api/widgets/:workspaceId
  * Get all widgets for a workspace
  */
-router.get('/:workspaceId', auth, async (req, res) => {
+router.get('/:workspaceId', authMiddleware, async (req, res) => {
   try {
     const { workspaceId } = req.params;
     const userId = req.user.id;
@@ -39,7 +39,7 @@ router.get('/:workspaceId', auth, async (req, res) => {
  * POST /api/widgets/:workspaceId
  * Save/update widgets layout for workspace
  */
-router.post('/:workspaceId', auth, async (req, res) => {
+router.post('/:workspaceId', authMiddleware, async (req, res) => {
   try {
     const { workspaceId } = req.params;
     const { widgets } = req.body;
@@ -86,7 +86,7 @@ router.post('/:workspaceId', auth, async (req, res) => {
  * DELETE /api/widgets/:workspaceId/:widgetId
  * Delete a single widget
  */
-router.delete('/:workspaceId/:widgetId', auth, async (req, res) => {
+router.delete('/:workspaceId/:widgetId', authMiddleware, async (req, res) => {
   try {
     const { workspaceId, widgetId } = req.params;
     const userId = req.user.id;
